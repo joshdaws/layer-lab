@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layer Lab</title>
+<style>
+:root{
+  --bg:#0c0d0f; --panel:#15171b; --panel2:#1c1f24; --line:#2a2e35; --text:#e9eaec; --dim:#9298a2; --faint:#626873;
+  --accent:#ff4fc3; --c0:#ff4fc3; --c1:#3cc8ff; --c2:#ffc828; --c3:#78ff78; --c4:#b48cff; --c5:#ff8a4c;
+  --ok:#5ad19a; --bad:#ff6b6b; --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line)}
+header h1{font-size:15px;font-weight:650;letter-spacing:.02em;margin:0;display:flex;align-items:center;gap:8px}
+header h1 i{width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,var(--c0),var(--c1));display:inline-block}
+header .sp{flex:1}
+select,.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 11px}
+.btn{cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#3d434c}
+.btn.primary{background:var(--text);color:#0c0d0f;border-color:var(--text);font-weight:600}
+.btn.primary:hover{background:#fff}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:default}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0;height:calc(100% - 55px)}
+.left{padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.right{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+.stage{position:relative;width:100%;background:#000;border-radius:var(--radius);overflow:hidden;user-select:none;touch-action:none}
+.stage video,.stage img.still{position:absolute;inset:0;width:100%;height:100%;display:block}
+.layer{position:absolute;inset:0;pointer-events:none}
+.mask{position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;opacity:.5;transition:opacity .15s}
+.mask.sel{opacity:.72}
+.chip{position:absolute;transform:translate(-2px,-100%);pointer-events:auto;cursor:pointer;font-size:11px;font-weight:700;color:#0c0d0f;border-radius:5px;padding:1px 6px;box-shadow:0 1px 4px #0008}
+.chip.sel{outline:2px solid #fff}
+.cut{position:absolute;pointer-events:auto;cursor:grab;filter:drop-shadow(0 0 0 transparent)}
+.cut.drag{cursor:grabbing}
+.cut img{width:100%;height:100%;display:block;outline:1.5px dashed #fffa;outline-offset:2px}
+.hole{position:absolute;background:repeating-linear-gradient(45deg,#ff4fc322 0 6px,#0000 6px 12px);border:1px dashed #ff4fc388;border-radius:4px}
+.wipe{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px #0006;pointer-events:none}
+.wipe::after{content:"";position:absolute;top:50%;left:-9px;width:20px;height:20px;border-radius:50%;background:#fff;transform:translateY(-50%)}
+.tags{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.tags span{background:#000a;padding:3px 7px;border-radius:5px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hint{color:var(--dim);font-size:13px}
+.right h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin:0 0 8px;font-weight:650}
+.find{display:flex;gap:8px}
+.find input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none}
+.find input:focus{border-color:#4a515b}
+.cands{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cand{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 8px;cursor:pointer;font-size:12px}
+.cand i{width:10px;height:10px;border-radius:3px}
+.cand.sel{border-color:#fff}
+.list{display:flex;flex-direction:column;gap:8px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.card.on{border-color:#4f5661}
+.card .t{display:flex;align-items:center;gap:8px;font-weight:600}
+.card .t small{font-weight:400;color:var(--dim);margin-left:auto}
+.card .row{display:flex;gap:6px;flex-wrap:wrap}
+.card .row .btn{padding:5px 9px;font-size:12.5px}
+.opts{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--dim)}
+.opts label{display:flex;align-items:center;gap:7px}
+.status{font-size:12px;color:var(--dim)}
+.status.done{color:var(--ok)} .status.failed{color:var(--bad)}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c2);margin-right:6px;animation:p 1.2s infinite}
+@keyframes p{50%{opacity:.25}}
+.empty{color:var(--faint);font-size:13px}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(560px,92vw)}
+dialog::backdrop{background:#000a}
+.renders{max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.renders button{text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 10px;cursor:pointer}
+.renders button:hover{border-color:#4a515b}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--dim)}
+.drop.over{border-color:var(--accent);color:var(--text)}
+.scale{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px}
+@media (max-width:860px){main{grid-template-columns:1fr;height:auto}.right{border-left:0;border-top:1px solid var(--line)}#gpu{display:none}header{flex-wrap:wrap}.left{padding:12px}}
+body{overflow-x:hidden}
+#gpu{max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+  <h1><i></i>Layer Lab</h1>
+  <select id="shot"></select>
+  <button class="btn" id="newShot">New shot</button>
+  <span class="sp"></span>
+  <span class="hint" id="gpu"></span>
+</header>
+<main>
+  <section class="left">
+    <div class="stage" id="stage">
+      <img class="still" id="still" alt="">
+      <video id="v" playsinline loop muted></video>
+      <video id="v2" playsinline loop muted style="display:none"></video>
+      <div class="layer" id="masks"></div>
+      <div class="layer" id="moveLayer"></div>
+      <div class="wipe" id="wipe" style="display:none"></div>
+      <div class="tags" id="tags" style="display:none"><span>Original</span><span>Edited</span></div>
+    </div>
+    <div class="bar" id="bar"></div>
+  </section>
+  <aside class="right">
+    <div>
+      <h2>Find</h2>
+      <form class="find" id="findForm"><input id="q" placeholder="potted plant, the man in white, mug…" autocomplete="off"><button class="btn primary">Find</button></form>
+      <div class="cands" id="cands"></div>
+      <div class="bar" id="makeBar" style="margin-top:10px;display:none">
+        <input id="label" class="btn" style="flex:1;min-width:0;cursor:text" placeholder="Name this layer">
+        <button class="btn primary" id="make">Make layer</button>
+      </div>
+    </div>
+    <div><h2>Layers</h2><div class="list" id="objects"></div></div>
+    <div><h2>Edits</h2><div class="list" id="edits"></div></div>
+  </aside>
+</main>
+<dialog id="dlg">
+  <h2 style="margin:0 0 4px;font-size:16px">New shot</h2>
+  <div class="hint">Pick a Studio render, or drop a clip (24 fps, up to 14 s).</div>
+  <div class="renders" id="renders"></div>
+  <label class="drop" id="drop">Drop a video here or click to choose<input type="file" id="file" accept="video/*" hidden></label>
+  <div class="bar" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="dlg.close()">Close</button></div>
+</dialog>
+<script>
+if(!location.pathname.endsWith('/')) location.replace(location.pathname+'/'+location.search);
+const $=s=>document.querySelector(s), api=(p,o={})=>fetch(p,o).then(async r=>{if(!r.ok)throw new Error((await r.json().catch(()=>({detail:r.statusText}))).detail);return r.json()});
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+const COLORS=['--c0','--c1','--c2','--c3','--c4','--c5'].map(c=>getComputedStyle(document.documentElement).getPropertyValue(c).trim());
+let S={pid:null,meta:null,objects:[],edits:[],find:null,picks:new Set(),mode:'still',move:null,view:null,jobs:[]};
+const stage=$('#stage'), v=$('#v'), v2=$('#v2'), still=$('#still');
+const F=(p)=>`files/${S.pid}/${p}`;
+const pct=(x,tot)=>`${100*x/tot}%`;
+
+async function loadProjects(sel){
+  const ps=await api('api/projects'); const s=$('#shot');
+  s.innerHTML=ps.length?ps.map(p=>`<option value="${p.id}">${p.title} · ${p.id.slice(0,4)}</option>`).join(''):'<option value="">No shots yet</option>';
+  if(sel) s.value=sel; if(s.value) openProject(s.value); else showEmpty();
+}
+function showEmpty(){stage.style.aspectRatio='16/9';$('#bar').innerHTML='<span class="hint">Start with “New shot”: a Studio render or any clip.</span>'}
+async function openProject(pid){
+  S.pid=pid; S.find=null; S.picks.clear(); S.move=null; S.view=null;
+  await refresh(); setView({kind:'source'});
+}
+async function refresh(){
+  const d=await api(`api/projects/${S.pid}`); S.meta=d.meta; S.objects=d.objects; S.edits=d.edits;
+  stage.style.aspectRatio=`${S.meta.w}/${S.meta.h}`; renderSide();
+}
+// ---------- the stage ----------
+function setView(view){
+  S.view=view; S.move=null; $('#moveLayer').innerHTML=''; $('#wipe').style.display='none'; $('#tags').style.display='none'; v2.style.display='none'; v.style.clipPath='';
+  if(view.kind==='find'){ v.style.display='none'; still.style.display='block'; still.src=F('poster.jpg'); renderMasks(); bar(`<span class="hint">Click the highlights or chips to pick what belongs to the layer.</span>`); return}
+  $('#masks').innerHTML=''; still.style.display='none'; v.style.display='block';
+  if(view.kind==='source'){ play(F('source.mp4')); bar(`<span class="hint">${S.meta.title} · ${S.meta.w}×${S.meta.h} · ${(S.meta.n/24).toFixed(1)} s. Type what to find.</span>`)}
+  if(view.kind==='track'){ play(F(`objects/${view.oid}/track.mp4`)); const o=S.objects.find(o=>o.id===view.oid); bar(`<span class="hint">Layer “${o.label}” tracked through the shot.</span>`)}
+  if(view.kind==='result'){ play(F(`edits/${view.eid}/final.mp4`)); const e=S.edits.find(e=>e.id===view.eid);
+    bar(`<button class="btn" onclick="setView({kind:'compare',eid:'${view.eid}'})">Before / after</button><a class="btn" href="${F(`edits/${view.eid}/final.mp4`)}" download>Download</a><span class="hint">${e.op} “${e.label}”</span>`)}
+  if(view.kind==='compare'){ compare(view.eid) }
+}
+function play(src){ if(!v.src.endsWith(src)){v.src=src} v.play().catch(()=>{}) }
+function bar(h){$('#bar').innerHTML=h}
+function renderMasks(){
+  const L=$('#masks'); L.innerHTML=''; if(!S.find) return;
+  S.find.cands.forEach((c,k)=>{
+    const col=COLORS[k%COLORS.length], url=F(`finds/${S.find.fid}/${c.i}.png`), sel=S.picks.has(c.i);
+    const m=document.createElement('div'); m.className='mask'+(sel?' sel':''); m.style.background=col; m.style.webkitMaskImage=m.style.maskImage=`url(${url})`;
+    if(!sel && S.picks.size) m.style.opacity=.22; L.appendChild(m);
+    const ch=document.createElement('div'); ch.className='chip'+(sel?' sel':''); ch.style.background=col; ch.textContent=k+1;
+    ch.style.left=pct(c.box[0],S.meta.w); ch.style.top=pct(Math.max(c.box[1],14),S.meta.h); ch.onclick=()=>toggle(c.i); L.appendChild(ch);
+  });
+}
+stage.addEventListener('click',e=>{ // click a highlight on the still to pick it: the smallest box under the pointer
+  if(S.view?.kind!=='find'||!S.find) return; const r=stage.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*S.meta.w, y=(e.clientY-r.top)/r.height*S.meta.h;
+  const hit=S.find.cands.filter(c=>x>=c.box[0]&&x<=c.box[0]+c.box[2]&&y>=c.box[1]&&y<=c.box[1]+c.box[3]).sort((a,b)=>a.area-b.area)[0];
+  if(hit) toggle(hit.i);
+});
+function toggle(i){ S.picks.has(i)?S.picks.delete(i):S.picks.add(i); renderMasks(); renderCands() }
+// ---------- before/after wipe ----------
+function compare(eid){
+  play(F(`edits/${eid}/final.mp4`)); v2.src=F('source.mp4'); v2.style.display='block'; v2.play().catch(()=>{});
+  $('#wipe').style.display='block'; $('#tags').style.display='flex'; let x=.5;
+  const set=()=>{v2.style.clipPath=`inset(0 ${100-100*x}% 0 0)`; $('#wipe').style.left=`calc(${100*x}% - 1px)`}; set();
+  stage.onpointermove=e=>{ if(S.view?.kind!=='compare')return; const r=stage.getBoundingClientRect(); x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)); set() };
+  const sync=()=>{ if(S.view?.kind!=='compare')return; if(Math.abs(v2.currentTime-v.currentTime)>.06) v2.currentTime=v.currentTime; requestAnimationFrame(sync)}; sync();
+  bar(`<button class="btn" onclick="setView({kind:'result',eid:'${eid}'})">Edited only</button><span class="hint">Move across the picture to wipe between the original (left) and the edit.</span>`);
+}
+// ---------- move mode ----------
+function startMove(oid){
+  const o=S.objects.find(o=>o.id===oid); setView({kind:'source'}); v.pause(); v.style.display='none'; still.style.display='block'; still.src=F('poster.jpg');
+  S.view={kind:'move',oid}; S.move={oid,dx:0,dy:0,scale:1};
+  const W=S.meta.w,H=S.meta.h,[bx,by,bw,bh]=o.box, cx=bx+bw/2, cy=by+bh;
+  const L=$('#moveLayer'); L.innerHTML=`<div class="hole" style="left:${pct(bx,W)};top:${pct(by,H)};width:${pct(bw,W)};height:${pct(bh,H)}"></div><div class="cut" id="cut"><img src="${F(`objects/${oid}/cutout.png`)}" draggable="false"></div>`;
+  const cut=$('#cut');
+  const place=()=>{const m=S.move,s=m.scale; cut.style.left=pct(cx+m.dx-s*bw/2,W); cut.style.top=pct(cy+m.dy-s*bh,H); cut.style.width=pct(bw*s,W); cut.style.height=pct(bh*s,H)}; place();
+  let start=null;
+  cut.onpointerdown=e=>{start={x:e.clientX,y:e.clientY,dx:S.move.dx,dy:S.move.dy}; cut.setPointerCapture(e.pointerId); cut.classList.add('drag')};
+  cut.onpointermove=e=>{ if(!start)return; const k=W/stage.getBoundingClientRect().width; S.move.dx=Math.round(start.dx+(e.clientX-start.x)*k); S.move.dy=Math.round(start.dy+(e.clientY-start.y)*k); place(); readout()};
+  cut.onpointerup=()=>{start=null; cut.classList.remove('drag')};
+  stage.onwheel=e=>{ if(S.view?.kind!=='move')return; e.preventDefault(); S.move.scale=Math.min(2.5,Math.max(.3,S.move.scale*(e.deltaY<0?1.04:1/1.04))); $('#sc').value=S.move.scale; place(); readout()};
+  const readout=()=>{$('#ro').textContent=`moved ${S.move.dx}, ${S.move.dy} px · ${Math.round(S.move.scale*100)}%`};
+  bar(`<span class="scale">Size <input id="sc" type="range" min=".3" max="2.5" step=".01" value="1"></span><span class="hint" id="ro"></span><span style="flex:1"></span>
+       <label class="hint"><input type="checkbox" id="mvLock" checked> Keep untouched pixels</label>
+       <button class="btn" onclick="setView({kind:'source'})">Cancel</button><button class="btn primary" id="go">Render move</button>`);
+  $('#sc').oninput=e=>{S.move.scale=+e.target.value; place(); readout()}; readout();
+  $('#go').onclick=async()=>{ $('#go').disabled=true; $('#go').textContent='Queued…'; await post(`api/projects/${S.pid}/edit`,{oid,op:'move',dx:S.move.dx,dy:S.move.dy,scale:S.move.scale,with_shadow:true,lock:$('#mvLock').checked}); setView({kind:'source'}); poll() };
+}
+// ---------- side panel ----------
+function renderCands(){
+  const box=$('#cands'); if(!S.find){box.innerHTML='';$('#makeBar').style.display='none';return}
+  box.innerHTML=S.find.cands.length?S.find.cands.map((c,k)=>`<span class="cand ${S.picks.has(c.i)?'sel':''}" onclick="toggle(${c.i})"><i style="background:${COLORS[k%COLORS.length]}"></i>${k+1} · ${Math.round(c.score*100)}%</span>`).join(''):'<span class="empty">Nothing found. Try other words.</span>';
+  $('#makeBar').style.display=S.picks.size?'flex':'none'; $('#make').disabled=false; $('#make').textContent='Make layer';
+}
+function renderSide(){
+  renderCands();
+  const jobsFor=S.jobs.filter(j=>j.pid===S.pid&&j.status!=='done');
+  $('#objects').innerHTML=(S.objects.length?S.objects.map(o=>`<div class="card ${S.view?.oid===o.id?'on':''}">
+      <div class="t">${o.label}<small>${o.frames_present}/${S.meta.n} frames</small></div>
+      <div class="row"><button class="btn" onclick="setView({kind:'track',oid:'${o.id}'})">Show</button>
+      <button class="btn" onclick="startMove('${o.id}')">Move…</button>
+      ${pending(o.id,'delete')?'<button class="btn danger" disabled>Deleting…</button>':`<button class="btn danger" onclick="del('${o.id}')">Delete from shot</button>`}</div>
+      <div class="opts"><label><input type="checkbox" id="sh_${o.id}" ${S.noShadow?.has(o.id)?'':'checked'} onchange="(S.noShadow??=new Set())[this.checked?'delete':'add']('${o.id}')"> Include its shadow</label></div></div>`).join(''):'')
+    +jobsFor.filter(j=>j.kind==='track').map(jobCard).join('') || '<span class="empty">Find something, pick it, and make it a layer.</span>';
+  $('#edits').innerHTML=jobsFor.filter(j=>j.kind==='edit'&&(j.status==='queued'||j.status==='failed')).map(jobCard).join('')+(S.edits.map(e=>`<div class="card ${S.view?.eid===e.id?'on':''}">
+      <div class="t">${e.op==='move'?'Move':'Delete'} ${e.label}<small>${new Date(e.created*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</small></div>
+      ${e.status==='done'?`<div class="row"><button class="btn" onclick="setView({kind:'result',eid:'${e.id}'})">Play</button><button class="btn" onclick="setView({kind:'compare',eid:'${e.id}'})">Before / after</button><button class="btn" onclick="retake('${e.id}')">New take</button></div>`:`<div class="status ${e.status}">${e.status==='running'?'<span class=pulse></span>'+(nice(liveJob(e)?.stage)||'Rendering'):e.status}</div>`}
+    </div>`).join('')||(jobsFor.some(j=>j.kind==='edit')?'':'<span class="empty">Edits you render show up here.</span>'));
+}
+function nice(st){ if(!st)return''; if(st.startsWith('picture edit')) return 'Painting the keyframes'; if(st.startsWith('queued ')) return 'Rendering the shot (H3)'; if(st.startsWith('status')) return 'Finishing'; return st.charAt(0).toUpperCase()+st.slice(1) }
+function liveJob(e){ return S.jobs.find(j=>j.pid===S.pid&&j.kind==='edit'&&j.args?.oid===e.object&&j.args?.op===e.op&&j.status==='running') }
+function jobCard(j){return `<div class="card"><div class="t">${j.title}<small>${j.status}</small></div><div class="status ${j.status}">${j.status==='failed'?(j.error||'failed').slice(-240):`<span class="pulse"></span>${nice(j.stage)}`}</div>
+  ${j.status==='queued'?`<div class="row"><button class="btn" onclick="cancelJob('${j.id}')">Cancel</button></div>`:''}
+  ${j.status==='failed'&&j.kind==='edit'?`<div class="row"><button class="btn" onclick="retry('${j.id}')">Try again (new seed)</button></div>`:''}</div>`}
+async function retake(eid){ const e=S.edits.find(x=>x.id===eid); if(!e)return; event?.target&&(event.target.disabled=true,event.target.textContent='Queued…');
+  await post(`api/projects/${S.pid}/edit`,{oid:e.object,op:e.op,dx:e.dx,dy:e.dy,scale:e.scale,with_shadow:e.with_shadow,lock:e.lock,seed:Math.floor(Math.random()*1e6)}); poll() }
+async function cancelJob(id){ await post(`api/jobs/${id}/cancel`,{}).catch(()=>{}); poll() }
+async function retry(id){ const j=S.jobs.find(x=>x.id===id); if(!j)return; const a={...j.args,lock:j.args.lock_pixels,seed:(j.args.seed||0)+1}; await post(`api/projects/${j.pid}/edit`,a); poll() }
+function pending(oid,op){ return S.jobs.some(j=>j.pid===S.pid&&j.args?.oid===oid&&j.args?.op===op&&(j.status==='queued'||j.status==='running')) }
+async function del(oid){
+  const b=event?.target; if(pending(oid,'delete')){ if(b){b.textContent='Already rendering'} return }
+  if(b){b.disabled=true; b.textContent='Queued…'}
+  await post(`api/projects/${S.pid}/edit`,{oid,op:'delete',with_shadow:$('#sh_'+oid).checked,lock:true}); poll() }
+$('#findForm').onsubmit=async e=>{e.preventDefault(); const q=$('#q').value.trim(); if(!q||!S.pid)return;
+  $('#cands').innerHTML='<span class="empty"><span class="pulse"></span>Looking…</span>';
+  try{ S.find=await post(`api/projects/${S.pid}/find`,{text:q}); S.picks=new Set(S.find.cands.length?[S.find.cands[0].i]:[]); $('#label').value=q; setView({kind:'find'}); renderCands() }
+  catch(err){ $('#cands').innerHTML=`<span class="empty">${err.message}</span>` } };
+$('#make').onclick=async()=>{ $('#make').disabled=true; $('#make').textContent='Tracking…'; await post(`api/projects/${S.pid}/track`,{fid:S.find.fid,picks:[...S.picks],label:$('#label').value||$('#q').value}); S.find=null; S.picks.clear(); setView({kind:'source'}); poll() };
+// ---------- jobs ----------
+let pollT=null;
+async function poll(){ clearTimeout(pollT); S.jobs=await api('api/jobs'); const live=S.jobs.filter(j=>j.status==='queued'||j.status==='running');
+  $('#gpu').innerHTML=live.length?`<span class="pulse"></span>${live[0].title}: ${nice(live[0].stage)}`:'';
+  const before=S.objects.length+':'+S.edits.map(e=>e.status).join(); if(S.pid) await refresh(); const after=S.objects.length+':'+S.edits.map(e=>e.status).join();
+  if(before!==after && S.view?.kind==='source') renderSide();
+  pollT=setTimeout(poll,live.length?4000:15000) }
+// ---------- new shot ----------
+$('#newShot').onclick=async()=>{ dlg.showModal(); const rs=await api('api/studio-renders');
+  $('#renders').innerHTML=rs.map(r=>`<button data-p="${r.path}">${r.name} <span class="hint">· ${new Date(r.mtime*1000).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></button>`).join('');
+  $('#renders').querySelectorAll('button').forEach(b=>b.onclick=async()=>{b.textContent='Importing…'; const m=await post('api/projects/from-path',{path:b.dataset.p}); dlg.close(); loadProjects(m.id)}) };
+const drop=$('#drop'); drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')}; drop.ondragleave=()=>drop.classList.remove('over');
+async function sendFile(f){ drop.textContent='Uploading…'; const fd=new FormData(); fd.append('file',f); const m=await api('api/projects/upload',{method:'POST',body:fd}); dlg.close(); loadProjects(m.id) }
+drop.ondrop=e=>{e.preventDefault(); sendFile(e.dataTransfer.files[0])}; $('#file').onchange=e=>sendFile(e.target.files[0]);
+$('#shot').onchange=e=>openProject(e.target.value);
+loadProjects(); poll();
+</script>
+</body>
+</html>

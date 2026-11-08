@@ -1,0 +1,7 @@
+# Layer Lab's own packages. The engine also imports ComfyUI's modules (SAM 3.1 runs in-process),
+# so the same environment needs ComfyUI's requirements and a CUDA build of PyTorch: scripts/setup.sh does all three.
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
+numpy>=1.26
+opencv-python-headless>=4.9
